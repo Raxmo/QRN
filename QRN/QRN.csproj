@@ -20,4 +20,13 @@
     <PackageReference Include="OpenTK" Version="4.6.7" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Resources\Screen.frag">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Resources\Screen.vert">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
