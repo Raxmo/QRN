@@ -19,8 +19,8 @@ namespace QRN
 
 			// Game Window settings
 			GWs.IsMultiThreaded = false;
-			GWs.RenderFrequency = 60;
-			GWs.UpdateFrequency = 60;
+			GWs.RenderFrequency = 20;
+			GWs.UpdateFrequency = 20;
 
 			// Native Window Setings
 			NWs.APIVersion = Version.Parse("4.1.0");
@@ -29,15 +29,23 @@ namespace QRN
 
 			// create window
 			GameWindow GW = new GameWindow(GWs, NWs);
-			GW.UpdateFrame += (FrameEventArgs args) =>
-			{
-				// Put game loop here
-			};
 
+			// Window set-up
 			ShaderProgram SProg = new ShaderProgram() { id = 0 };
+			int wres = -1;
+			int frameid = -1;
 			GW.Load += () =>
 			{
 				SProg = ShaderProgram.Load("Resources/Screen.vert", "Resources/Screen.frag");
+				wres = GL.GetUniformLocation(SProg.id, "wres");
+				frameid = GL.GetUniformLocation(SProg.id, "frame");
+			};
+
+			// Game loop stuffs
+			uint frame = 0;
+			GW.UpdateFrame += (FrameEventArgs args) =>
+			{
+				frame++;
 			};
 
 			// Rendering logic
@@ -51,16 +59,12 @@ namespace QRN
 				float[] verts =
 				{
 					-1.0f, -1.0f, 0.0f,
-					-1.0f,  1.0f, 0.0f,
-					 1.0f,  1.0f, 0.0f,
-
-					 1.0f,  1.0f, 0.0f,
-					 1.0f, -1.0f, 0.0f,
-					-1.0f, -1.0f, 0.0f
+					-1.0f,  3.0f, 0.0f,
+					 3.0f, -1.0f, 0.0f
 				};
 				int vao = GL.GenVertexArray();
 				int vertecies = GL.GenBuffer();
-
+				
 				// Data setup
 				GL.BindVertexArray(vao);
 				GL.BindBuffer(BufferTarget.ArrayBuffer, vertecies);
@@ -68,8 +72,13 @@ namespace QRN
 				GL.EnableVertexAttribArray(0);
 				GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 0, 0);
 
+				// Uniforms
+				GL.Uniform2(wres, GW.Size);
+				GL.Uniform1(frameid, frame);
+
+
 				// Drawing
-				GL.DrawArrays(PrimitiveType.Triangles, 0, 6);
+				GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
 
 				// Cleanup
 				GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
@@ -156,6 +165,10 @@ namespace QRN
 			}
 			#endregion
 		}
+		#endregion
+
+		#region Classes
+
 		#endregion
 	}
 }
