@@ -4,6 +4,8 @@ using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Graphics.OpenGL4;
 using System.IO;
+using OpenTK.Windowing.GraphicsLibraryFramework;
+using System.Diagnostics;
 
 namespace QRN
 {
@@ -16,6 +18,9 @@ namespace QRN
 			// declarations
 			GameWindowSettings GWs = GameWindowSettings.Default;
 			NativeWindowSettings NWs = NativeWindowSettings.Default;
+			Stopwatch sw = Stopwatch.StartNew();
+			double timeEllapsed = 0.0;
+			double deltat = 0.0;
 
 			// Game Window settings
 			GWs.IsMultiThreaded = false;
@@ -34,18 +39,47 @@ namespace QRN
 			ShaderProgram SProg = new ShaderProgram() { id = 0 };
 			int wres = -1;
 			int frameid = -1;
+			int unifplayer = -1;
 			GW.Load += () =>
 			{
 				SProg = ShaderProgram.Load("Resources/Screen.vert", "Resources/Screen.frag");
 				wres = GL.GetUniformLocation(SProg.id, "wres");
 				frameid = GL.GetUniformLocation(SProg.id, "frame");
+				unifplayer = GL.GetUniformLocation(SProg.id, "player");
 			};
 
 			// Game loop stuffs
 			uint frame = 0;
+			Vector3 player = new Vector3(2.0f, 1.5f, 0.0f);
 			GW.UpdateFrame += (FrameEventArgs args) =>
 			{
+				double curt = sw.ElapsedMilliseconds / 1000.0;
+				deltat = curt - timeEllapsed;
+				timeEllapsed = curt;
 				frame++;
+
+				KeyboardState kstate = GW.KeyboardState;
+
+				double playerspeed = 1.0;
+
+				if(kstate.IsKeyDown(Keys.W))
+				{
+					player.X += (float)(Math.Cos(player.Z) * playerspeed * deltat);
+					player.Y += (float)(Math.Sin(player.Z) * playerspeed * deltat);
+				}
+				if(kstate.IsKeyDown(Keys.S))
+				{
+					player.X -= (float)(Math.Cos(player.Z) * playerspeed * deltat);
+					player.Y -= (float)(Math.Sin(player.Z) * playerspeed * deltat);
+				}
+				if(kstate.IsKeyDown(Keys.D))
+				{
+					player.Z += (float)(1.0 * deltat);
+				}
+				if(kstate.IsKeyDown(Keys.A))
+				{
+					player.Z -= (float)(1.0 * deltat);
+				}
 			};
 
 			// Rendering logic
@@ -75,6 +109,7 @@ namespace QRN
 				// Uniforms
 				GL.Uniform2(wres, GW.Size);
 				GL.Uniform1(frameid, frame);
+				GL.Uniform3(unifplayer, player);
 
 
 				// Drawing
