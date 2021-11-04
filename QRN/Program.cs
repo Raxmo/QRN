@@ -24,8 +24,8 @@ namespace QRN
 
 			// Game Window settings
 			GWs.IsMultiThreaded = false;
-			GWs.RenderFrequency = 20;
-			GWs.UpdateFrequency = 20;
+			GWs.RenderFrequency = 60;
+			GWs.UpdateFrequency = 60;
 
 			// Native Window Setings
 			NWs.APIVersion = Version.Parse("4.1.0");
@@ -40,17 +40,20 @@ namespace QRN
 			int wres = -1;
 			int frameid = -1;
 			int unifplayer = -1;
+			int uniplayvert = -1;
 			GW.Load += () =>
 			{
 				SProg = ShaderProgram.Load("Resources/Screen.vert", "Resources/Screen.frag");
 				wres = GL.GetUniformLocation(SProg.id, "wres");
 				frameid = GL.GetUniformLocation(SProg.id, "frame");
 				unifplayer = GL.GetUniformLocation(SProg.id, "player");
+				uniplayvert = GL.GetUniformLocation(SProg.id, "playvert");
 			};
 
 			// Game loop stuffs
 			uint frame = 0;
 			Vector3 player = new Vector3(2.0f, 1.5f, 0.0f);
+			Vector2 playvert = new Vector2(0.0f, 0.0f);
 			GW.UpdateFrame += (FrameEventArgs args) =>
 			{
 				double curt = sw.ElapsedMilliseconds / 1000.0;
@@ -60,7 +63,7 @@ namespace QRN
 
 				KeyboardState kstate = GW.KeyboardState;
 
-				double playerspeed = 1.0;
+				double playerspeed = 5.0;
 
 				if(kstate.IsKeyDown(Keys.W))
 				{
@@ -79,6 +82,14 @@ namespace QRN
 				if(kstate.IsKeyDown(Keys.A))
 				{
 					player.Z -= (float)(1.0 * deltat);
+				}
+				if(kstate.IsKeyDown(Keys.R))
+				{
+					playvert.Y = (float)Math.Clamp(playvert.Y + 0.4 * deltat, -0.5, 0.5);
+				}
+				if(kstate.IsKeyDown(Keys.F))
+				{
+					playvert.Y = (float)Math.Clamp(playvert.Y - 0.4 * deltat, -0.5, 0.5);
 				}
 			};
 
@@ -108,8 +119,9 @@ namespace QRN
 
 				// Uniforms
 				GL.Uniform2(wres, GW.Size);
-				GL.Uniform1(frameid, frame);
+				GL.Uniform1(frameid, frame / 3);
 				GL.Uniform3(unifplayer, player);
+				GL.Uniform2(uniplayvert, playvert);
 
 
 				// Drawing

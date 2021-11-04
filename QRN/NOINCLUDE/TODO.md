@@ -6,21 +6,33 @@
     - [ ] Controls
       - [ ] Mouse
         - [ ] Look left/right
-        - [ ] ? Look up/down
+        - [ ] Look up/down
       - [ ] Keyboard
-        - [ ] WASD movement
+        - [x] WASD movement
         - [ ] E to interact
+        - [x] Look up/down
     - [ ] Rendering
       - [ ] Raycast
         - [ ] VS tilemap
+          - [x] Basic
+            - [x] Walls
+            - [x] FLoor
+            - [x] Ceiling
+          - [ ] Advanced
+            - [ ] variable textures
+              - [ ] walls
+              - [ ] floors
+              - [ ] ceilings
+          - [ ] variable height
+            - [ ] Floors
+            - [ ] Ceilings
         - [ ] Sprites
-      - [ ] Static
+      - [x] Static
       - [ ] SDF
         - [ ] Text
         - [ ] Sprites
     - [ ] Data
       - [ ] Map Image
-      - [ ] Textures
     - [ ] Interactions
       - [ ] Doors
       - [ ] Notes

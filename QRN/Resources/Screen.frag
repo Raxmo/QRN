@@ -1,4 +1,5 @@
 ﻿#version 430
+#define iCoord gl_FragCoord.xy
 const float PI = 3.141592654;
 
 out vec4 fragcol;
@@ -8,19 +9,36 @@ uniform uint frame = 0;
 
 const float FOV = 1.0;
 
-vec2 suv = gl_FragCoord.xy / wres.x - vec2(0.0, 0.5 * (wres.y / wres.x));
+uniform vec3 player = vec3(3, 2, 0.0);
+uniform vec2 playvert = vec2(0.0);
+
+vec2 suv = (iCoord - 0.5 * wres)/wres.x - vec2(0.0, 0.0);
 
 // Map data stuffs
-#define MapWidth 9
-#define MapHeight 6
+#define MapWidth 20
+#define MapHeight 20
 uniform uint[MapHeight][MapWidth] MapFloors = 
 {
-	{1, 1, 1, 1, 1, 1, 1, 1, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 1, 1, 1, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 1, 0, 1},
-	{1, 1, 1, 1, 1, 1, 1, 1, 1}
+	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
+	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
 };
 
 const float PHI = (1.0 * sqrt(5.0)) / 2.0;
@@ -29,20 +47,23 @@ float noise(in vec2 xy)
 	return fract(tan(distance(xy * PHI, xy) * frame) * xy.x);
 }
 
-uniform vec3 player = vec3(3, 2, 0.0);
-
-float maxdist = 6.0;
+float maxdist = 20.0;
 
 float FloorColor(in vec2 uv)
 {
 	float col = 0.0;
 	
-	vec2 f = vec2(abs(uv));
-	col = max(f.x, f.y);
-	float width = 0.1;
+	vec2 t = (uv);
+	t = (t - 0.5) * 2.0;
+	t = abs(t);
 	
-	col = clamp(2.0 * (1.0 - width - col) / width + 1.0, 0.0, 1.0);
+	col = max(t.x, t.y);
+	col = 1.0 - col;
 	
+	float width = 0.2;
+	col -= width / 40.0;
+	col /= width;
+	col = clamp(col, 0.0, 1.0);
 
 	return col;
 }
@@ -50,8 +71,8 @@ float FloorColor(in vec2 uv)
 float WallColor(in vec2 uv)
 {
 	float col = 0.0;
-	vec2 t = fract(uv);
-	t *= vec2(2.0, 4.0);
+	vec2 t = vec2(uv);
+	t *= vec2(1.0, 2.0);
 	t.x = t.x + float(int(t.y)) * 0.5 + 0.25;
 	t = fract(abs(t));
 	
@@ -75,15 +96,19 @@ void main()
 {
 	//declare color variable
 	float col = 0.0;
+	float wallheight = 5.0;
 	// --------------------------------- //
+	// Screen UV transformations //
+	suv.y += playvert.y;
+	// ------------------------------------ //
 	// --- Rendering declariations --- //
 	float dist = 0.0;
-	float fdist = min(abs(0.5 / suv.y), maxdist);
+	float fdist = min(abs(0.5 * wallheight / suv.y), maxdist);
 
 	bool isNS = false;
 
 	bool hit = false;
-	float rayangle = player.z - FOV / 2.0 + suv.x * FOV;
+	float rayangle = player.z + suv.x * FOV;
 	vec2 avec = vec2(cos(rayangle), sin(rayangle));
 	vec2 side = vec2
 	(
@@ -152,18 +177,32 @@ void main()
 	vec2 wuv = vec2(0.0);
 	vec2 fuv = vec2(0.0);
 
-	fuv = (fract(avec * fdist + player.xy) - 0.5) * 2.0;
+	fuv = fract(avec * fdist + player.xy);
 
 	if(isNS)
 	{
-		wuv.x = -sign(avec.y) * ((fract(avec.x * dist + player.x) - 0.5) * 2.0);
+		if(avec.y < 0) // <- Looking North
+		{
+			wuv.x = fract((avec * dist + player.xy).x);
+		}
+		else // <- Looking South
+		{
+			wuv.x = 1.0 - fract((avec * dist + player.xy).x);
+		}
 	}
 	else
 	{
-		wuv.x = sign(avec.x) * ((fract(avec.y * dist + player.y) - 0.5) * 2.0);
+		if(avec.x < 0) // <- Looking West
+		{
+			wuv.x = 1.0 - fract((avec * dist + player.xy).y);
+		}
+		else // <- Looking East
+		{
+			wuv.x = fract((avec * dist + player.xy).y);
+		}
 	}
 
-	wuv.y = 2.0 * suv.y * dist;
+	wuv.y = fract(suv.y * dist - 0.5 * wallheight);
 
 	bool iswall = dist < fdist;
 
@@ -171,10 +210,12 @@ void main()
 	float wallcol = float(wuv.x + wuv.y) * float(iswall);
 
 	col = WallColor(wuv) * float(iswall) + FloorColor(fuv) * float(!iswall);
+	//col = clamp(wuv.x + wuv.y, 0.0, 1.0) * float(iswall) + FloorColor(fuv) * float(!iswall);
 	// ------------------------------------------- //
 	
 	dist = min(fdist, dist);
-	float fog = 1.0 - (dist / maxdist);
+	dist *= cos(rayangle - player.z);
+	float fog = 1.0 - (dist / (maxdist * cos(rayangle - player.z)));
 
 	col *= fog;
 	// --------------------------------- //
