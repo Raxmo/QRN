@@ -15,31 +15,8 @@ uniform vec2 playvert = vec2(0.0);
 vec2 suv = (iCoord - 0.5 * wres)/wres.x - vec2(0.0, 0.0);
 
 // Map data stuffs
-#define MapWidth 20
-#define MapHeight 20
-uniform uint[MapHeight][MapWidth] MapFloors = 
-{
-	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
-	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
-};
+uniform sampler2D MapData;
+uniform ivec2 msize = ivec2(256, 256);
 
 const float PHI = (1.0 * sqrt(5.0)) / 2.0;
 float noise(in vec2 xy)
@@ -163,9 +140,9 @@ void main()
 			isNS = true;
 		}
 
-		if (check.x >= 0 && check.x < MapWidth && check.y >= 0 && check.y < MapHeight)
+		if (check.x >= 0 && check.x < msize.x && check.y >= 0 && check.y < msize.y)
 		{
-			if (MapFloors[check.y][check.x] > 0)
+			if ( texture2D(MapData, check / vec2(msize)).r > 0)
 			{
 				hit = true;
 				dist = min(dist, maxdist);
@@ -210,17 +187,15 @@ void main()
 	float wallcol = float(wuv.x + wuv.y) * float(iswall);
 
 	col = WallColor(wuv) * float(iswall) + FloorColor(fuv) * float(!iswall);
-	//col = clamp(wuv.x + wuv.y, 0.0, 1.0) * float(iswall) + FloorColor(fuv) * float(!iswall);
 	// ------------------------------------------- //
-	
 	dist = min(fdist, dist);
-	dist *= cos(rayangle - player.z);
-	float fog = 1.0 - (dist / (maxdist * cos(rayangle - player.z)));
+	float fog = 1.0 - (dist / (maxdist));
 
 	col *= fog;
 	// --------------------------------- //
 	// Final output
 	col = clamp(col, 0.001, 0.999);
-	col = float(noise(gl_FragCoord.xy) < col);
+	//col = float(noise(gl_FragCoord.xy) < col);
+	//col = texture(MapData, suv).r;
 	fragcol = vec4(vec3(col), 1.0);
 }

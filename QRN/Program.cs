@@ -1,16 +1,44 @@
-﻿using System;
-using OpenTK.Windowing.Desktop;
+﻿using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
-using OpenTK.Graphics.OpenGL4;
-using System.IO;
+using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
+using System;
 using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
 
 namespace QRN
 {
 	class Program
 	{
+		static uint[,] Map = new uint[,]
+{
+	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
+	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+};
+
+		static Bitmap MapImg;
+
 		#region Entry Point
 		static void Main(string[] args)
 		{
@@ -28,7 +56,7 @@ namespace QRN
 			GWs.UpdateFrequency = 60;
 
 			// Native Window Setings
-			NWs.APIVersion = Version.Parse("4.1.0");
+			NWs.APIVersion = Version.Parse("4.3.0");
 			NWs.Size = new Vector2i(1600, 900);
 			NWs.Title = "QRN:  Dead Air";
 
@@ -41,6 +69,9 @@ namespace QRN
 			int frameid = -1;
 			int unifplayer = -1;
 			int uniplayvert = -1;
+			int uniMap = -1;
+			int uniMapData = -1;
+			int unimsize = -1;
 			GW.Load += () =>
 			{
 				SProg = ShaderProgram.Load("Resources/Screen.vert", "Resources/Screen.frag");
@@ -48,12 +79,38 @@ namespace QRN
 				frameid = GL.GetUniformLocation(SProg.id, "frame");
 				unifplayer = GL.GetUniformLocation(SProg.id, "player");
 				uniplayvert = GL.GetUniformLocation(SProg.id, "playvert");
+				uniMap = GL.GetUniformLocation(SProg.id, "MapFloors");
+				uniMapData = GL.GetUniformLocation(SProg.id, "MapData");
+				unimsize = GL.GetUniformLocation(SProg.id, "msize");
+
+				#region map texture stuffs
+				MapImg= new Bitmap("Resources/map-1.png");
+				//bmp.RotateFlip(RotateFlipType.RotateNoneFlipY);
+
+				int texture = GL.GenTexture();
+				GL.BindTexture(TextureTarget.Texture2D, texture);
+
+				BitmapData bmpdat = MapImg.LockBits(new Rectangle(0, 0, MapImg.Width, MapImg.Height), ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+				GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, MapImg.Width, MapImg.Height, 0, OpenTK.Graphics.OpenGL4.PixelFormat.Rgba, PixelType.UnsignedByte, bmpdat.Scan0);
+				MapImg.UnlockBits(bmpdat);
+				GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
+				GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
+				#endregion
+
+				#region Map setup
+				GL.UseProgram(SProg.id);
+
+				GL.Uniform2(unimsize, new Vector2i(MapImg.Width, MapImg.Height));
+
+				GL.UseProgram(0);
+				#endregion
 			};
 
 			// Game loop stuffs
 			uint frame = 0;
-			Vector3 player = new Vector3(2.0f, 1.5f, 0.0f);
+			Vector3 player = new Vector3(2.5f, 1.5f, 0.0f);
 			Vector2 playvert = new Vector2(0.0f, 0.0f);
+			float radius = 1.5f;
 			GW.UpdateFrame += (FrameEventArgs args) =>
 			{
 				double curt = sw.ElapsedMilliseconds / 1000.0;
@@ -65,16 +122,6 @@ namespace QRN
 
 				double playerspeed = 5.0;
 
-				if(kstate.IsKeyDown(Keys.W))
-				{
-					player.X += (float)(Math.Cos(player.Z) * playerspeed * deltat);
-					player.Y += (float)(Math.Sin(player.Z) * playerspeed * deltat);
-				}
-				if(kstate.IsKeyDown(Keys.S))
-				{
-					player.X -= (float)(Math.Cos(player.Z) * playerspeed * deltat);
-					player.Y -= (float)(Math.Sin(player.Z) * playerspeed * deltat);
-				}
 				if(kstate.IsKeyDown(Keys.D))
 				{
 					player.Z += (float)(1.0 * deltat);
@@ -91,6 +138,59 @@ namespace QRN
 				{
 					playvert.Y = (float)Math.Clamp(playvert.Y - 0.4 * deltat, -0.5, 0.5);
 				}
+
+
+				double DPX = 0;
+				double DPY = 0;
+				if (kstate.IsKeyDown(Keys.W))
+				{
+					DPX += Math.Cos(player.Z) * deltat * playerspeed;
+					DPY += Math.Sin(player.Z) * deltat * playerspeed;
+				}
+				if (kstate.IsKeyDown(Keys.S))
+				{
+					DPX -= Math.Cos(player.Z) * deltat * playerspeed;
+					DPY -= Math.Sin(player.Z) * deltat * playerspeed;
+				}
+
+				double potpx = player.X + DPX;
+				double potpy = player.Y + DPY;
+
+				int scx = (int)(potpx - 3.0);
+				int scy = (int)(potpy - 3.0);
+				int ecx = (int)(potpx + 3.0);
+				int ecy = (int)(potpy + 3.0);
+
+				for (int cy = scy; cy <= ecy; cy++)
+				{
+					for (int cx = scx; cx <= ecx; cx++)
+					{
+						
+						if (cy >= 0 && cx >= 0 && cy < MapImg.Width && cx < MapImg.Height && MapImg.GetPixel(cx, cy).R >= 1)
+						{
+							double nx = Math.Clamp(potpx, cx, cx + 1);
+							double ny = Math.Clamp(potpy, cy, cy + 1);
+
+							double rx = nx - potpx;
+							double ry = ny - potpy;
+							double rm = Math.Sqrt(rx * rx + ry * ry);
+							double nrx = rx / rm;
+							double nry = ry / rm;
+
+							double ovlp = radius - rm;
+							if (double.IsNaN(ovlp)) ovlp = 0;
+
+							if (ovlp > 0)
+							{
+								potpx = potpx - nrx * ovlp;
+								potpy = potpy - nry * ovlp;
+							}
+						}
+					}
+				}
+
+				player.X = (float)potpx;
+				player.Y = (float)potpy;
 			};
 
 			// Rendering logic
