@@ -81,6 +81,7 @@ void main()
 	// --- Rendering declariations --- //
 	float dist = 0.0;
 	float fdist = min(abs(0.5 * wallheight / suv.y), maxdist);
+	float sdist = min(abs((0.5 * wallheight - 1.0) / suv.y), maxdist);
 
 	bool isNS = false;
 
@@ -122,6 +123,8 @@ void main()
 		delta.y = (float(check.y) - player.y + 1) * side.y;
 	}
 	// ------------------------------------- //
+	// --- UV mapping PT. 1 --- //
+	vec2 wuv = vec2(0.0);
 	// --- DDA algorithm --- //
 	while (!hit && dist < maxdist)
 	{
@@ -142,16 +145,38 @@ void main()
 
 		if (check.x >= 0 && check.x < msize.x && check.y >= 0 && check.y < msize.y)
 		{
-			if ( texture2D(MapData, check / vec2(msize)).r > 0)
+			bool thit = false;
+			if ( texture2D(MapData, check / vec2(msize)).r > 0.0)
 			{
-				hit = true;
+				thit = true;
 				dist = min(dist, maxdist);
 			}
+
+			wuv.y = suv.y * dist + 0.5 * wallheight;
+
+			if(texture2D(MapData, check / vec2(msize)).b < 1.0 && wuv.y < 4.0)
+			{
+				float lfdist = fdist;
+
+				if(suv.y > 0.0 && thit)
+				{
+					fdist = sdist;
+				}
+				
+				ivec2 fcheck = ivec2(player.xy + fdist * avec);
+				
+				if(fcheck != check)
+				{
+					fdist = lfdist;
+				}
+
+				thit = false;
+				
+			}
+			hit = thit;
 		}
 	}
 	// ---------------------------------------- //
-	// --- UV mapping --- //
-	vec2 wuv = vec2(0.0);
 	vec2 fuv = vec2(0.0);
 
 	fuv = fract(avec * fdist + player.xy);
@@ -179,14 +204,12 @@ void main()
 		}
 	}
 
-	wuv.y = fract(suv.y * dist - 0.5 * wallheight);
-
 	bool iswall = dist < fdist;
 
 	float floorcol = float(fuv.x + fuv.y) * float(!iswall);
 	float wallcol = float(wuv.x + wuv.y) * float(iswall);
 
-	col = WallColor(wuv) * float(iswall) + FloorColor(fuv) * float(!iswall);
+	col = WallColor(fract(wuv)) * float(iswall) + FloorColor(fuv) * float(!iswall);
 	// ------------------------------------------- //
 	dist = min(fdist, dist);
 	float fog = 1.0 - (dist / (maxdist));
@@ -195,7 +218,8 @@ void main()
 	// --------------------------------- //
 	// Final output
 	col = clamp(col, 0.001, 0.999);
-	//col = float(noise(gl_FragCoord.xy) < col);
+	col = float(noise(gl_FragCoord.xy) < col);
 	//col = texture(MapData, suv).r;
 	fragcol = vec4(vec3(col), 1.0);
+	//fragcol = texture2D(MapData, suv);
 }

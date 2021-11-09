@@ -31,8 +31,8 @@
       - [ ] SDF
         - [ ] Text
         - [ ] Sprites
-    - [ ] Data
-      - [ ] Map Image
+    - [x] Data
+      - [x] Map Image
     - [ ] Interactions
       - [ ] Doors
       - [ ] Notes
