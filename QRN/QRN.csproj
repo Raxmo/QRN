@@ -25,6 +25,9 @@
     <None Update="Resources\map-1.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="Resources\Screen-1.frag">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Resources\Screen.frag">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

@@ -50,7 +50,7 @@ namespace QRN
 			int unimsize = -1;
 			GW.Load += () =>
 			{
-				SProg = ShaderProgram.Load("Resources/Screen.vert", "Resources/Screen.frag");
+				SProg = ShaderProgram.Load("Resources/Screen.vert", "Resources/Screen-1.frag");
 				wres = GL.GetUniformLocation(SProg.id, "wres");
 				frameid = GL.GetUniformLocation(SProg.id, "frame");
 				unifplayer = GL.GetUniformLocation(SProg.id, "player");
@@ -84,9 +84,9 @@ namespace QRN
 
 			// Game loop stuffs
 			uint frame = 0;
-			Vector3 player = new Vector3(2.5f, 1.5f, 0.0f);
-			Vector2 playvert = new Vector2(0.0f, 0.0f);
-			float radius = 1.5f;
+			Vector3 player = new Vector3(1.5f, 1.5f, 0.0f);
+			Vector2 playvert = new Vector2(2.5f, 0.0f);
+			float radius = 0.125f;
 			GW.UpdateFrame += (FrameEventArgs args) =>
 			{
 				double curt = sw.ElapsedMilliseconds / 1000.0;
@@ -96,7 +96,7 @@ namespace QRN
 
 				KeyboardState kstate = GW.KeyboardState;
 
-				double playerspeed = 5.0;
+				double playerspeed = 1.0;
 
 				if(kstate.IsKeyDown(Keys.D))
 				{
@@ -132,17 +132,19 @@ namespace QRN
 				double potpx = player.X + DPX;
 				double potpy = player.Y + DPY;
 
-				int scx = (int)(potpx - 3.0);
-				int scy = (int)(potpy - 3.0);
-				int ecx = (int)(potpx + 3.0);
-				int ecy = (int)(potpy + 3.0);
+				int scx = (int)(potpx - Math.Ceiling(radius));
+				int scy = (int)(potpy - Math.Ceiling(radius));
+				int ecx = (int)(potpx + Math.Ceiling(radius));
+				int ecy = (int)(potpy + Math.Ceiling(radius));
+
+				byte pfloor = MapImg.GetPixel((int)player.X % MapImg.Width, (int)player.Y % MapImg.Height).R;
 
 				for (int cy = scy; cy <= ecy; cy++)
 				{
 					for (int cx = scx; cx <= ecx; cx++)
 					{
 						
-						if (cy >= 0 && cx >= 0 && cy < MapImg.Width && cx < MapImg.Height && MapImg.GetPixel(cx, cy).R == 255)
+						if (cy >= 0 && cx >= 0 && cy < MapImg.Width && cx < MapImg.Height && MapImg.GetPixel(cx, cy).R - pfloor > 2)
 						{
 							double nx = Math.Clamp(potpx, cx, cx + 1);
 							double ny = Math.Clamp(potpy, cy, cy + 1);
