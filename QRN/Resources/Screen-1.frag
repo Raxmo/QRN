@@ -22,9 +22,10 @@ const float Pi = atan(-1.0, 0.0);
 const float Phi = (1.0 + sqrt(5.0)) / 2.0;
 
 const float FOV = 1.0;
-const float maxdist = 3.0;
+const float maxdist = 30.0;
 
-const float correction = cos(suv.x * FOV);
+const float correctionval = cos(suv.x * FOV);
+const float correction = correctionval * float(doCorrection) + float(!doCorrection);
 // ----------------------------------------------- //
 // ----- Functions ----- //
 float noise(in vec2 xy)
@@ -71,77 +72,82 @@ float getdist(in vec2 ro, in vec2 rd, out vec2 wuv, inout vec2 fuv, inout vec2 c
 	float deltafloor = playvert.x;
 	float deltaceiling = firstceiling - playvert.x;
 
-	fdist = min(deltafloor   / max(0.0, -suv.y), maxdist);
-	cdist = min(deltaceiling /  max(0.0, suv.y), maxdist);
+	fdist = min(deltafloor   / max(0.0, -suv.y), maxdist) / correction;
+	cdist = min(deltaceiling /  max(0.0, suv.y), maxdist) / correction;
 
 	bool isfloor   = ivec2(ro + rd * fdist) == check;
 	bool isceiling = ivec2(ro + rd * cdist) == check;
 	bool iswall = false;
 	bool hit = isfloor || isceiling;
 
-	// wall set-up
-	dist = min(tdist.x, tdist.y);
-	wuv.y = ((suv.y * dist + deltafloor));
-
 	fuv = fract(ro + rd * fdist) * float(isfloor);
 	cuv = fract(ro + rd * cdist) * float(isceiling);
-	
-	// next cell set-up
-	ncheck.x = int(float(tdist.x <= tdist.y) * sign(rd.x));
-	ncheck.y = int(float(tdist.y <= tdist.x) * sign(rd.y));
-	ncheck += check;
-	
-	float nfloor = min(getFloor(ncheck), firstceiling + firstfloor);
-	
-	float dtfloor = nfloor - firstfloor;
-	float nceiling = getCeiling(ncheck) + dtfloor;
-	
-	// check next floor against the current wall
-	iswall = (wuv.y <= dtfloor || wuv.y >= nceiling) && !isfloor && !isceiling;
-	hit = hit || iswall;
-	wuv /= 5.0;
-	wuv.y *= float(iswall);
+
+	// wall set-up
+	dist = min(tdist.x, tdist.y) * correction;
+	wuv.y = (suv.y * dist + deltafloor) * float(!hit);
 
 	// loop stuffs
 	while(dist < maxdist && !hit)
 	{
-		//hit = true;
-		deltafloor = playvert.x - dtfloor;
-		deltaceiling = nceiling - playvert.x;
+		// --- Previouse cell stuffs --- //
+		float previousfloor = getFloor(check);
 
-		tdist = tdist + deltadist * vec2((tdist.x < tdist.y), (tdist.y < tdist.x));
+		// --- Next cell stuffs --- //
+		// calculate the step to next cell
+		check += ivec2(sign(rd)) * ivec2(int(tdist.x <= tdist.y), int(tdist.y <= tdist.x));
 
-		dist = min(tdist.x, tdist.y);
+		// get info of next cell
+		float floordif = getFloor(check) - firstfloor;
+		float ceildif = getCeiling(check) + floordif;
 
-		fdist = min(deltafloor   / max(0.0, -suv.y), maxdist);
-		cdist = min(deltaceiling / max(0.0,  suv.y), maxdist);
-
-		check = ncheck;
+		deltafloor = playvert.x - floordif;
+		deltaceiling = getCeiling(check) - deltafloor;
 		
-		bool isfloor   = ivec2(ro + rd * fdist) == check;
-		bool isceiling = ivec2(ro + rd * cdist) == check;
+		// calculate floor and ceiling distances
+		fdist = min(deltafloor   / -suv.y, maxdist) / correction;
+		cdist = min(deltaceiling /  suv.y, maxdist) / correction;
+
+		// calculate wall height checks
+		iswall = (wuv.y <= floordif - previousfloor + firstfloor) || (wuv.y >= ceildif - previousfloor + firstfloor);
 		
+		// calculate what is floor or ceiling
+		isfloor   = ivec2(ro + rd * fdist) == check && suv.y <= 0.0 && !iswall;
+		isceiling = ivec2(ro + rd * cdist) == check && suv.y >= 0.0 && !iswall;
+		hit = isfloor || isceiling;
+		
+		// calculate floor and ceiling UVs
 		fuv = fract(ro + rd * fdist) * float(isfloor);
 		cuv = fract(ro + rd * cdist) * float(isceiling);
-
-		wuv.y = ((suv.y * dist + deltafloor)) * float(!isfloor) * float(!isceiling) / 5.0;
-
-		// next cell set-up
-		ncheck.x = int(float(tdist.x <= tdist.y) * sign(rd.x));
-		ncheck.y = int(float(tdist.y <= tdist.x) * sign(rd.y));
-		ncheck += check;
-
-		nfloor = min(getFloor(ncheck), firstceiling + firstfloor);
 		
-		dtfloor = nfloor - firstfloor;
-		nceiling = getCeiling(ncheck) + dtfloor;
+		// --- Wall Stuffs --- //
+		// current cell walls		
+		wuv.y = wuv.y * float(!hit && iswall);
 		
-		// check next floor against the current wall
-		iswall = (wuv.y <= dtfloor || wuv.y >= nceiling) && !isfloor && !isceiling;
-		hit = iswall || isfloor || isceiling;
+		hit = hit || iswall;
+
+		if(hit) continue;
+
+		// next cell potential walls
+		tdist += deltadist * vec2(tdist.x <= tdist.y, tdist.y <= tdist.x);
+		dist = min(tdist.x, tdist.y) * correction;
+		wuv.y = (suv.y * dist + deltafloor) * float(!hit);
 	}
 	// - - - - - - - - - - - - - - - - - //
-	return min(min(dist, min(fdist, cdist)), maxdist);
+	float maxmask = maxdist * float(!hit);
+
+	dist = dist * float(iswall);
+	fdist = fdist * float(isfloor);
+	cdist = cdist * float(isceiling);
+
+	vec2 ruv = clamp(ro + rd * dist - vec2(check), 0.0, 1.0);
+	wuv.x = (ruv.x * ruv.y + (1.0 - ruv.x) * (1.0 - ruv.y)) * float(iswall);
+	
+	dist += fdist;
+	dist += cdist;
+	dist += maxmask;
+
+	return dist;
 }
 // --------------------- //
 // ----- Textures ----- //
@@ -151,15 +157,15 @@ void main()
 {
 	float col = 0.0;
 	// - - - - - - - - - - - - - - - - - //
-	suv.y *= 20.0;
+	//suv.y *= 20.0;
 	vec2 wuv = vec2(0.0);
 	vec2 fuv = vec2(0.0);
 	vec2 cuv = vec2(0.0);
 	float dist = getdist(player.xy, vec2(cos(player.z + suv.x * FOV), sin(player.z + suv.x * FOV)), wuv, fuv, cuv);
 	
-	col = clamp(wuv.y, 0.0, 1.0) + max(fuv.y, fuv.x) + max(cuv.x, cuv.y);
+	col = clamp(max(wuv.y, wuv.x), 0.0, 1.0) + max(fuv.y, fuv.x) + max(cuv.x, cuv.y);
 	//col = (fcuv.x + fcuv.y) / 2.0;
-	col = dist / maxdist;
+	//col = 1.0 - dist / maxdist;
 	// - - - - - - - - - - - - - - - - - //
 	fragcol = vec4(vec3(col), 1.0);
 }
