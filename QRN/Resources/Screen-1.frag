@@ -12,7 +12,7 @@ uniform ivec2 msize = ivec2(256, 256);
 uniform vec3 player = vec3(3.5, 3.5, 0.0);
 uniform vec2 playvert = vec2(2.5, 0.0);
 
-uniform bool doCorrection = false;
+uniform bool doCorrection = true;
 // ---------------------------------------- //
 // <<<<<<<<<<----- other variables ----->>>>>>>>>> //
 out vec4 fragcol;
@@ -22,7 +22,7 @@ const float Pi = atan(-1.0, 0.0);
 const float Phi = (1.0 + sqrt(5.0)) / 2.0;
 
 const float FOV = 1.0;
-const float maxdist = 30.0;
+const float maxdist = 40.0;
 
 const float correctionval = cos(suv.x * FOV);
 const float correction = correctionval * float(doCorrection) + float(!doCorrection);
@@ -45,7 +45,7 @@ float getCeiling(in ivec2 location)
 	return getCell(location).g;
 }
 // - - - - - - - - - - - - - - - - - - - //
-float getdist(in vec2 ro, in vec2 rd, out vec2 wuv, inout vec2 fuv, inout vec2 cuv)
+float getdist(in vec2 ro, in vec2 rd, out vec2 wuv, out vec2 fuv, out vec2 cuv, out bool isfloor, out bool isceiling, out bool iswall)
 {
 	float dist = 0.0;
 	// - - - - - - - - - - - - - - - - - //
@@ -75,9 +75,9 @@ float getdist(in vec2 ro, in vec2 rd, out vec2 wuv, inout vec2 fuv, inout vec2 c
 	fdist = min(deltafloor   / max(0.0, -suv.y), maxdist) / correction;
 	cdist = min(deltaceiling /  max(0.0, suv.y), maxdist) / correction;
 
-	bool isfloor   = ivec2(ro + rd * fdist) == check;
-	bool isceiling = ivec2(ro + rd * cdist) == check;
-	bool iswall = false;
+	isfloor   = ivec2(ro + rd * fdist) == check;
+	isceiling = ivec2(ro + rd * cdist) == check;
+	iswall = false;
 	bool hit = isfloor || isceiling;
 
 	fuv = fract(ro + rd * fdist) * float(isfloor);
@@ -131,7 +131,7 @@ float getdist(in vec2 ro, in vec2 rd, out vec2 wuv, inout vec2 fuv, inout vec2 c
 		// next cell potential walls
 		tdist += deltadist * vec2(tdist.x <= tdist.y, tdist.y <= tdist.x);
 		dist = min(tdist.x, tdist.y) * correction;
-		wuv.y = (suv.y * dist + deltafloor) * float(!hit);
+		wuv.y = (suv.y * dist + deltafloor);
 	}
 	// - - - - - - - - - - - - - - - - - //
 	float maxmask = maxdist * float(!hit);
@@ -140,7 +140,7 @@ float getdist(in vec2 ro, in vec2 rd, out vec2 wuv, inout vec2 fuv, inout vec2 c
 	fdist = fdist * float(isfloor);
 	cdist = cdist * float(isceiling);
 
-	vec2 ruv = clamp(ro + rd * dist - vec2(check), 0.0, 1.0);
+	vec2 ruv = clamp(ro + rd * dist / correction - vec2(check), 0.0, 1.0);
 	wuv.x = (ruv.x * ruv.y + (1.0 - ruv.x) * (1.0 - ruv.y)) * float(iswall);
 	
 	dist += fdist;
@@ -151,6 +151,45 @@ float getdist(in vec2 ro, in vec2 rd, out vec2 wuv, inout vec2 fuv, inout vec2 c
 }
 // --------------------- //
 // ----- Textures ----- //
+float CeilingTexture(in vec2 uv)
+{
+	float col = 0.0;
+	// - - - - - - - - - - - - - - - - //
+	vec2 tuv = (uv - 0.5) * 2.0;
+	col = length(tuv);
+	col = 1.0 - clamp(col, 0.0, 1.0);
+	// - - - - - - - - - - - - - - - - //
+	return col;
+}
+float FLoorTexture(in vec2 uv)
+{
+	float col = 0.0;
+	// - - - - - - - - - - - - - - - - //
+	vec2 tuv = (uv - 0.5) * 2.0;
+	tuv = 1.0 - abs(tuv);
+	col = min(tuv.x, tuv.y) * 10.0;
+	col = clamp(col, 0.0, 1.0);
+	// - - - - - - - - - - - - - - - - //
+	return col;
+}
+float WallTexture(in vec2 uv)
+{
+	float col = 0.0;
+	// - - - - - - - - - - - - - - - - //
+	vec2 tuv = uv * vec2(2.0, 4.0);
+	tuv.x += float(int(tuv.y)) / 2.0;
+	tuv = fract(tuv);
+	tuv -= 0.5;
+	tuv = abs(tuv) * 2.0;
+	tuv.x -= 0.5;
+	tuv.x *= 2.0;
+	col = 1.0 - max(tuv.x, tuv.y);
+	col -= 0.025;
+	col *= 2.0;
+	// - - - - - - - - - - - - - - - - //
+	col = clamp(col, 0.0, 1.0);
+	return col;
+}
 // -------------------- //
 // ===== Main Function ===== //
 void main()
@@ -161,11 +200,27 @@ void main()
 	vec2 wuv = vec2(0.0);
 	vec2 fuv = vec2(0.0);
 	vec2 cuv = vec2(0.0);
-	float dist = getdist(player.xy, vec2(cos(player.z + suv.x * FOV), sin(player.z + suv.x * FOV)), wuv, fuv, cuv);
+	bool isfloor = false;
+	bool isceiling = false;
+	bool iswall = false;
+	float dist = getdist
+				(
+					player.xy,
+					vec2(cos(player.z + suv.x * FOV),
+					     sin(player.z + suv.x * FOV)),
+					wuv,
+					fuv,
+					cuv,
+					isfloor,
+					isceiling,
+					iswall
+				);
 	
-	col = clamp(max(wuv.y, wuv.x), 0.0, 1.0) + max(fuv.y, fuv.x) + max(cuv.x, cuv.y);
-	//col = (fcuv.x + fcuv.y) / 2.0;
-	//col = 1.0 - dist / maxdist;
+	//col = clamp(max(wuv.y, wuv.x), 0.0, 1.0) + max(fuv.y, fuv.x) + max(cuv.x, cuv.y);
+	col += WallTexture(wuv) * float(iswall);
+	col += FLoorTexture(fuv) * float(isfloor);
+	col += CeilingTexture(cuv) * float(isceiling);
+	col *= 1.0 - dist / maxdist;
 	// - - - - - - - - - - - - - - - - - //
 	fragcol = vec4(vec3(col), 1.0);
 }

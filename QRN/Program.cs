@@ -86,7 +86,7 @@ namespace QRN
 			uint frame = 0;
 			Vector3 player = new Vector3(1.5f, 1.5f, 0.0f);
 			Vector2 playvert = new Vector2(2.5f, 0.0f);
-			float radius = 0.125f;
+			float radius = 1.5f;
 			GW.UpdateFrame += (FrameEventArgs args) =>
 			{
 				double curt = sw.ElapsedMilliseconds / 1000.0;
@@ -96,7 +96,7 @@ namespace QRN
 
 				KeyboardState kstate = GW.KeyboardState;
 
-				double playerspeed = 1.0;
+				double playerspeed = 2.0;
 
 				if(kstate.IsKeyDown(Keys.D))
 				{
@@ -120,13 +120,13 @@ namespace QRN
 				double DPY = 0;
 				if (kstate.IsKeyDown(Keys.W))
 				{
-					DPX += Math.Cos(player.Z) * deltat * playerspeed;
-					DPY += Math.Sin(player.Z) * deltat * playerspeed;
+					DPX += Math.Cos(player.Z) * deltat * playerspeed * playvert.X;
+					DPY += Math.Sin(player.Z) * deltat * playerspeed * playvert.X;
 				}
 				if (kstate.IsKeyDown(Keys.S))
 				{
-					DPX -= Math.Cos(player.Z) * deltat * playerspeed;
-					DPY -= Math.Sin(player.Z) * deltat * playerspeed;
+					DPX -= Math.Cos(player.Z) * deltat * playerspeed * playvert.X;
+					DPY -= Math.Sin(player.Z) * deltat * playerspeed * playvert.X;
 				}
 
 				double potpx = player.X + DPX;
@@ -143,8 +143,8 @@ namespace QRN
 				{
 					for (int cx = scx; cx <= ecx; cx++)
 					{
-						
-						if (cy >= 0 && cx >= 0 && cy < MapImg.Width && cx < MapImg.Height && MapImg.GetPixel(cx, cy).R - pfloor > 2)
+
+						if (cy >= 0 && cx >= 0 && cy < MapImg.Width && cx < MapImg.Height && (MapImg.GetPixel(cx, cy).R - pfloor > 2 || MapImg.GetPixel(cx, cy).G + MapImg.GetPixel(cx, cy).R - pfloor < 3))
 						{
 							double nx = Math.Clamp(potpx, cx, cx + 1);
 							double ny = Math.Clamp(potpy, cy, cy + 1);

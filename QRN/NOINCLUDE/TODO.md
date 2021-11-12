@@ -19,13 +19,17 @@
             - [x] FLoor
             - [x] Ceiling
           - [ ] Advanced
+            - [x] Static Textures
+              - [x] walls
+              - [x] floors
+              - [x] ceilings
             - [ ] variable textures
               - [ ] walls
               - [ ] floors
               - [ ] ceilings
-          - [ ] variable height
-            - [ ] Floors
-            - [ ] Ceilings
+          - [x] variable height
+            - [x] Floors
+            - [x] Ceilings
         - [ ] Sprites
       - [x] Static
       - [ ] SDF
@@ -42,3 +46,6 @@
       - [ ] Player
       - [ ] Entity
       - [ ] Interactable
+  - [ ] Helper Programs
+    - [ ] Map Editor
+      - [ ] mostly 3D orthographic projection of map
