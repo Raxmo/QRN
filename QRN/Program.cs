@@ -29,7 +29,7 @@ namespace QRN
 			// Game Window settings
 			GWs.IsMultiThreaded = false;
 			GWs.RenderFrequency = 60;
-			GWs.UpdateFrequency = 60;
+			GWs.UpdateFrequency = 120;
 
 			// Native Window Setings
 			NWs.APIVersion = Version.Parse("4.3.0");
@@ -86,6 +86,7 @@ namespace QRN
 			uint frame = 0;
 			Vector3 player = new Vector3(1.5f, 1.5f, 0.0f);
 			Vector2 playvert = new Vector2(2.5f, 0.0f);
+			float playerheight = 2.5f;
 			float radius = 1.5f;
 			GW.UpdateFrame += (FrameEventArgs args) =>
 			{
@@ -120,22 +121,25 @@ namespace QRN
 				double DPY = 0;
 				if (kstate.IsKeyDown(Keys.W))
 				{
-					DPX += Math.Cos(player.Z) * deltat * playerspeed * playvert.X;
-					DPY += Math.Sin(player.Z) * deltat * playerspeed * playvert.X;
+					DPX += Math.Cos(player.Z) * deltat * playerspeed * playerheight;
+					DPY += Math.Sin(player.Z) * deltat * playerspeed * playerheight;
 				}
 				if (kstate.IsKeyDown(Keys.S))
 				{
-					DPX -= Math.Cos(player.Z) * deltat * playerspeed * playvert.X;
-					DPY -= Math.Sin(player.Z) * deltat * playerspeed * playvert.X;
+					DPX -= Math.Cos(player.Z) * deltat * playerspeed * playerheight;
+					DPY -= Math.Sin(player.Z) * deltat * playerspeed * playerheight;
 				}
 
 				double potpx = player.X + DPX;
 				double potpy = player.Y + DPY;
 
-				int scx = (int)(potpx - Math.Ceiling(radius));
-				int scy = (int)(potpy - Math.Ceiling(radius));
-				int ecx = (int)(potpx + Math.Ceiling(radius));
-				int ecy = (int)(potpy + Math.Ceiling(radius));
+				int ppix = (int)potpx;
+				int ppiy = (int)potpy;
+
+				int scx = (int)(potpx - (radius));
+				int scy = (int)(potpy - (radius));
+				int ecx = (int)(potpx + (radius));
+				int ecy = (int)(potpy + (radius));
 
 				byte pfloor = MapImg.GetPixel((int)player.X % MapImg.Width, (int)player.Y % MapImg.Height).R;
 
@@ -143,8 +147,17 @@ namespace QRN
 				{
 					for (int cx = scx; cx <= ecx; cx++)
 					{
+						bool docontinue = false;
+						docontinue = (cx == (int)player.X && cy == (int)player.Y);
+						if (docontinue) continue;
+						// old alg
+						double deltafloor = MapImg.GetPixel(cx, cy).R - pfloor;
+						double deltaceiling = MapImg.GetPixel(cx, cy).G + deltafloor;
 
-						if (cy >= 0 && cx >= 0 && cy < MapImg.Width && cx < MapImg.Height && (MapImg.GetPixel(cx, cy).R - pfloor > 2 || MapImg.GetPixel(cx, cy).G + MapImg.GetPixel(cx, cy).R - pfloor < 3))
+						bool canstep = Math.Abs(deltafloor) <= 2;
+						bool canfit = deltaceiling >= 3;
+
+						if (cy >= 0 && cx >= 0 && cy < MapImg.Width && cx < MapImg.Height)
 						{
 							double nx = Math.Clamp(potpx, cx, cx + 1);
 							double ny = Math.Clamp(potpy, cy, cy + 1);
@@ -158,17 +171,60 @@ namespace QRN
 							double ovlp = radius - rm;
 							if (double.IsNaN(ovlp)) ovlp = 0;
 
-							if (ovlp > 0)
+							if(!(canfit && canstep))
 							{
-								potpx = potpx - nrx * ovlp;
-								potpy = potpy - nry * ovlp;
+								if (ovlp > 0)
+								{
+									potpx = potpx - nrx * ovlp;
+									potpy = potpy - nry * ovlp;
+								}
+							}
+						}
+					}
+				}
+				player.X = (float)potpx;
+				player.Y = (float)potpy;
+
+
+				// Handle height changes...
+				double v = 0.0;
+				for (int cx = (int)player.X - 1; cx <= (int)player.X + 1; cx++)
+				{
+					for(int cy = (int)player.Y - 1; cy <= (int)player.Y + 1; cy++)
+					{
+						pfloor = MapImg.GetPixel((int)player.X % MapImg.Width, (int)player.Y % MapImg.Height).R;
+						float cfloor = MapImg.GetPixel(cx, cy).R;
+
+						float deltaheight = cfloor - pfloor;
+						float deltaceiling = MapImg.GetPixel(cx, cy).G + deltaheight;
+
+						bool canstep = Math.Abs(deltaheight) <= 2.0;
+						bool canfit = deltaceiling >= 3.0;
+
+						if(canfit && canstep)
+						{
+							float val = deltaheight / 2.0f;
+							Vector2 n = new Vector2
+							(
+								Math.Clamp(player.X, (float)cx, (float)cx + 1.0f),
+								Math.Clamp(player.Y, (float)cy, (float)cy + 1.0f)
+							);
+
+							Vector2 deltan = n - new Vector2(player.X, player.Y);
+							double d = deltan.Length;
+							d = 1.0 - Math.Clamp((d * 2.0), 0.0, 1.0);
+
+							if(Math.Abs(d * val) >= Math.Abs(v))
+							{
+								v = d * val;
 							}
 						}
 					}
 				}
 
-				player.X = (float)potpx;
-				player.Y = (float)potpy;
+				GW.Title = $"V: {v}";
+
+				playvert.X = playerheight + (float)v;
 			};
 
 			// Rendering logic

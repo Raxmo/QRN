@@ -141,7 +141,17 @@ float getdist(in vec2 ro, in vec2 rd, out vec2 wuv, out vec2 fuv, out vec2 cuv, 
 	cdist = cdist * float(isceiling);
 
 	vec2 ruv = clamp(ro + rd * dist / correction - vec2(check), 0.0, 1.0);
-	wuv.x = (ruv.x * ruv.y + (1.0 - ruv.x) * (1.0 - ruv.y)) * float(iswall);
+	ruv = (ruv - 0.5) * 2.0;
+
+	vec2 t = ruv;
+	t.x = -ruv.y / ruv.x;
+	t.y =  ruv.x / ruv.y;
+
+	t = (t / 2.0) + 0.5;
+	t.x = t.x * float(t.x >= 0.0 && t.x <= 1.0);
+	t.y = t.y * float(t.y >= 0.0 && t.y <= 1.0);
+
+	wuv.x = t.x + t.y;
 	
 	dist += fdist;
 	dist += cdist;
@@ -186,6 +196,8 @@ float WallTexture(in vec2 uv)
 	col = 1.0 - max(tuv.x, tuv.y);
 	col -= 0.025;
 	col *= 2.0;
+
+	//col = max(fract(uv.x), fract(uv.y));
 	// - - - - - - - - - - - - - - - - //
 	col = clamp(col, 0.0, 1.0);
 	return col;
@@ -216,12 +228,12 @@ void main()
 					iswall
 				);
 	
-	//col = clamp(max(wuv.y, wuv.x), 0.0, 1.0) + max(fuv.y, fuv.x) + max(cuv.x, cuv.y);
 	col += WallTexture(wuv) * float(iswall);
 	col += FLoorTexture(fuv) * float(isfloor);
 	col += CeilingTexture(cuv) * float(isceiling);
 	col *= 1.0 - dist / maxdist;
 	// - - - - - - - - - - - - - - - - - //
+	//col = float(noise(iCoord) < clamp(col, 0.05, 0.995));
 	fragcol = vec4(vec3(col), 1.0);
 }
 // ========================= //

@@ -48,4 +48,4 @@
       - [ ] Interactable
   - [ ] Helper Programs
     - [ ] Map Editor
-      - [ ] mostly 3D orthographic projection of map
+      - [ ] full 3D "mode7" projection
